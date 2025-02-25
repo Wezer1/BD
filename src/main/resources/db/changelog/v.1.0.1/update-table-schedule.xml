@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+
+    <!-- 1. Добавление временного столбца -->
+    <changeSet id="add-temp-flight-duration-column" author="uPagge">
+        <addColumn tableName="schedule">
+            <column name="temp_flight_duration" type="bigint"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- 2. Преобразование данных из interval в bigint -->
+    <changeSet id="convert-flight-duration-data" author="uPagge">
+        <sql>
+            UPDATE schedule
+            SET temp_flight_duration = EXTRACT(EPOCH FROM flight_duration);
+        </sql>
+    </changeSet>
+
+    <!-- 3. Удаление старого столбца -->
+    <changeSet id="drop-old-flight-duration-column" author="uPagge">
+        <dropColumn tableName="schedule" columnName="flight_duration"/>
+    </changeSet>
+
+    <!-- 4. Переименование временного столбца в оригинальное имя -->
+    <changeSet id="rename-temp-column-to-flight-duration" author="uPagge">
+        <renameColumn tableName="schedule"
+                      oldColumnName="temp_flight_duration"
+                      newColumnName="flight_duration"
+                      columnDataType="bigint"/>
+    </changeSet>
+
+</databaseChangeLog>
