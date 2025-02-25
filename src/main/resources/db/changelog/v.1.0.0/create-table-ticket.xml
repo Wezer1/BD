@@ -18,7 +18,7 @@
             <column name="price" type="decimal(10,2)">
                 <constraints nullable="false"/>
             </column>
-            <column name="class" type="varchar(50)">
+            <column name="clas" type="varchar(50)">
                 <constraints nullable="false"/>
             </column>
             <column name="seat" type="varchar(10)">
