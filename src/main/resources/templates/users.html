@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Пользователи</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .user-info {
+            flex-grow: 1;
+        }
+
+        form {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+            width: 250px;
+            padding: 8px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        a {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Пользователи</h1>
+
+<ul id="userList">
+    <!-- Список пользователей будет загружен динамически -->
+</ul>
+
+<h2>Добавить нового пользователя</h2>
+<form id="addUserForm">
+    <div>
+        <input type="text" id="name" placeholder="Имя" required />
+    </div>
+    <div>
+        <input type="text" id="lastname" placeholder="Фамилия" required />
+    </div>
+    <div>
+        <input type="email" id="email" placeholder="Email" required />
+    </div>
+    <div>
+        <input type="password" id="password" placeholder="Пароль" required />
+    </div>
+    <div>
+        <label for="roleSelect">Роль:</label><br/>
+        <select id="roleSelect" required>
+            <option value="">-- Выберите --</option>
+            <option value="USER">Пользователь</option>
+            <option value="ADMIN">Администратор</option>
+        </select>
+    </div>
+    <button type="submit" class="btn-add">Добавить</button>
+</form>
+
+<a href="/data">← Назад</a>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+
+    // === Загрузка пользователей ===
+    function loadUsers() {
+        fetch('/api/users/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(users => {
+                const userList = document.getElementById('userList');
+                userList.innerHTML = '';
+                users.forEach(user => {
+                    const li = document.createElement('li');
+
+                    const info = document.createElement('div');
+                    info.classList.add('user-info');
+                    info.dataset.id = user.id;
+                    info.innerHTML = `
+                    <strong>${user.name} ${user.lastname}</strong><br/>
+                    Email: ${user.email}<br/>
+                    Роль: ${user.role || 'Не указана'}
+                `;
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Изменить';
+                    editBtn.className = 'btn-edit';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Удалить';
+                    deleteBtn.className = 'btn-delete';
+
+                    // Удаление
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`Удалить пользователя "${user.email}"?`)) {
+                            fetch(`/api/users/${user.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(() => loadUsers());
+                        }
+                    });
+
+                    // Редактирование
+                    editBtn.addEventListener('click', () => {
+                        const newName = prompt("Введите новое имя:", user.name);
+                        const newLastname = prompt("Введите новую фамилию:", user.lastname);
+                        const newEmail = prompt("Введите новый email:", user.email);
+                        const newPassword = prompt("Введите новый пароль:", user.password);
+                        const newRole = prompt("Введите новую роль (USER/ADMIN):", user.role);
+
+                        if (newName && newLastname && newEmail && newRole && newPassword) {
+                            fetch(`/api/users/${user.id}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    name: newName,
+                                    lastname: newLastname,
+                                    email: newEmail,
+                                    password: newPassword,
+                                    role: newRole
+                                })
+                            }).then(() => loadUsers());
+                        }
+                    });
+
+                    li.appendChild(info);
+                    li.appendChild(editBtn);
+                    li.appendChild(deleteBtn);
+                    userList.appendChild(li);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки пользователей:', err));
+    }
+
+    // === Добавление нового пользователя ===
+    document.getElementById('addUserForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const lastname = document.getElementById('lastname').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const role = document.getElementById('roleSelect').value;
+
+        if (!name || !lastname || !email || !password || !role) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+        }
+
+        fetch('/api/users/', {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, lastname, email, password, role })
+        })
+            .then(() => {
+                document.getElementById('name').value = '';
+                document.getElementById('lastname').value = '';
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('roleSelect').value = '';
+                loadUsers();
+            })
+            .catch(err => console.error('Ошибка добавления пользователя:', err));
+    });
+
+    // === Проверка токена при загрузке ===
+    window.onload = function () {
+        if (!token) {
+            window.location.href = '/login';
+        } else {
+            loadUsers();
+        }
+    };
+</script>
+</body>
+</html>

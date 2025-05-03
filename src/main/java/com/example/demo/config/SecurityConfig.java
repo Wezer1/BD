@@ -1,6 +1,7 @@
 package com.example.demo.config;
 
 import com.example.demo.security.JwtConfigurer;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -34,28 +35,30 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf().disable() // Отключаем CSRF (для тестирования)
+                .csrf().disable()
                 .authorizeHttpRequests()
-                .requestMatchers("/api/users/registration").permitAll() // Разрешаем доступ к этим маршрутам
-                .anyRequest()
-                .authenticated() // Остальные запросы требуют аутентификации
+                // Публичные маршруты
+                .requestMatchers("/**").permitAll()
+//                .requestMatchers("/api/users/registration", "/login", "/register", "/api/auth/login").permitAll()
+//                .requestMatchers("/", "/index.html").permitAll()
+//                .requestMatchers("/api/**").authenticated()
+                .anyRequest().authenticated()
                 .and()
-                .formLogin()
-                .loginPage("/api/auth/login") // Указываем свою кастомную страницу логина
-                .permitAll() // Разрешаем доступ ко всем пользователям
-                .defaultSuccessUrl("/") // Перенаправляем после успешной аутентификации
+                .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
-                .apply(jwtConfigurer)
+                .apply(jwtConfigurer) // Добавляет JWT фильтр перед UsernamePasswordAuthenticationFilter
                 .and()
-                .logout() // Настраиваем logout
-                .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "POST"))
-                .invalidateHttpSession(true) // Удаляем сессию
-                .clearAuthentication(true) // Очищаем данные аутентификации
-                .deleteCookies("JSESSIONID") // Удаляем cookie
-                .logoutSuccessUrl("/api/auth/login");// Перенаправляем на страницу логина после выхода
-
+                .logout()
+                .logoutUrl("/api/auth/logout")
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID")
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    response.setStatus(HttpServletResponse.SC_OK);
+                });
 
         return http.build();
+    }
 //        http
 //                .csrf().disable()
 //                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -69,8 +72,8 @@ public class SecurityConfig {
 //                .apply(jwtConfigurer);
 //
 //        return http.build();
-    }
-    
+
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);

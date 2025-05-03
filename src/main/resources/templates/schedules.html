@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Расписание</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .schedule-info {
+            flex-grow: 1;
+        }
+
+        form {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        input[type="datetime-local"],
+        input[type="number"],
+        select {
+            width: 250px;
+            padding: 8px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        a {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Расписание рейсов</h1>
+
+<ul id="scheduleList">
+    <!-- Список расписаний будет загружен динамически -->
+</ul>
+
+<h2>Добавить новое расписание</h2>
+<form id="addScheduleForm">
+    <div>
+        <label for="flightSelect">Выберите рейс:</label><br/>
+        <select id="flightSelect" required>
+            <option value="">-- Выберите --</option>
+        </select>
+    </div>
+    <div>
+        <label for="departureDatetime">Время отправления:</label><br/>
+        <input type="datetime-local" id="departureDatetime" required />
+    </div>
+    <div>
+        <label for="arrivalDatetime">Время прибытия:</label><br/>
+        <input type="datetime-local" id="arrivalDatetime" required />
+    </div>
+    <div>
+        <label for="durationMinutes">Длительность полёта (минуты):</label><br/>
+        <input type="number" id="durationMinutes" placeholder="Например: 90" required />
+    </div>
+    <button type="submit" class="btn-add">Добавить</button>
+</form>
+
+<a href="/data">← Назад</a>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+
+    // === Загрузка рейсов и заполнение выпадающего списка ===
+    function loadFlightsForSelect() {
+        fetch('/api/flight/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(flights => {
+                const flightSelect = document.getElementById('flightSelect');
+                flightSelect.innerHTML = '<option value="">-- Выберите --</option>';
+                flights.forEach(flight => {
+                    const option = document.createElement('option');
+                    option.value = flight.id;
+                    option.textContent = `${flight.flightNumber} (${flight.departure} → ${flight.destination})`;
+                    flightSelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки рейсов:', err));
+    }
+
+    // === Загрузка расписаний ===
+    function loadSchedules() {
+        fetch('/api/schedule/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(schedules => {
+                const scheduleList = document.getElementById('scheduleList');
+                scheduleList.innerHTML = '';
+                schedules.forEach(schedule => {
+                    const li = document.createElement('li');
+
+                    const info = document.createElement('div');
+                    info.classList.add('schedule-info');
+                    info.dataset.id = schedule.id;
+                    info.innerHTML = `
+                    <strong>Рейс: ${schedule.flightNumber || 'ID: ' + schedule.flightId}</strong><br/>
+                    Отправление: ${new Date(schedule.departureDatetime).toLocaleString()}<br/>
+                    Прибытие: ${new Date(schedule.arrivalDatetime).toLocaleString()}<br/>
+                    Длительность: ${Math.floor(schedule.flightDuration / 60)} ч. ${schedule.flightDuration % 60} мин.
+                `;
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Изменить';
+                    editBtn.className = 'btn-edit';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Удалить';
+                    deleteBtn.className = 'btn-delete';
+
+                    // Удаление
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`Удалить расписание "${schedule.flightNumber}"?`)) {
+                            fetch(`/api/schedule/${schedule.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(() => loadSchedules());
+                        }
+                    });
+
+                    // Редактирование
+                    editBtn.addEventListener('click', () => {
+                        const newDeparture = prompt("Введите новое время отправления:", schedule.departureDatetime);
+                        const newArrival = prompt("Введите новое время прибытия:", schedule.arrivalDatetime);
+                        const newDuration = prompt("Введите новую длительность (минуты):", schedule.flightDuration);
+                        const newFlightId = prompt("Введите новый ID рейса:", schedule.flightId);
+
+                        if (newDeparture && newArrival && newDuration && newFlightId) {
+                            fetch(`/api/schedule/${schedule.id}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    departureDatetime: newDeparture,
+                                    arrivalDatetime: newArrival,
+                                    flightDuration: parseInt(newDuration),
+                                    flightId: parseInt(newFlightId)
+                                })
+                            }).then(() => loadSchedules());
+                        }
+                    });
+
+                    li.appendChild(info);
+                    li.appendChild(editBtn);
+                    li.appendChild(deleteBtn);
+                    scheduleList.appendChild(li);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки расписаний:', err));
+    }
+
+    // === Добавление нового расписания ===
+    document.getElementById('addScheduleForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const flightId = document.getElementById('flightSelect').value;
+        const departureDatetime = document.getElementById('departureDatetime').value;
+        const arrivalDatetime = document.getElementById('arrivalDatetime').value;
+        const durationMinutes = document.getElementById('durationMinutes').value;
+
+        if (!flightId || !departureDatetime || !arrivalDatetime || !durationMinutes) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+        }
+
+        fetch('/api/schedule/', {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                flightId: parseInt(flightId),
+                departureDatetime,
+                arrivalDatetime,
+                flightDuration: parseInt(durationMinutes)
+            })
+        }).then(() => {
+            document.getElementById('flightSelect').value = '';
+            document.getElementById('departureDatetime').value = '';
+            document.getElementById('arrivalDatetime').value = '';
+            document.getElementById('durationMinutes').value = '';
+            loadSchedules();
+        }).catch(err => console.error('Ошибка добавления расписания:', err));
+    });
+
+    // === Проверка токена при загрузке ===
+    window.onload = function () {
+        if (!token) {
+            window.location.href = '/login';
+        } else {
+            loadFlightsForSelect();
+            loadSchedules();
+        }
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Список авиакомпаний</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .company-name {
+            font-size: 18px;
+            flex-grow: 1;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        input[type="text"] {
+            width: 300px;
+            padding: 8px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-save {
+            background-color: #28a745;
+            color: white;
+        }
+
+        a {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Авиакомпании</h1>
+
+<ul id="companyList">
+    <!-- Список компаний будет загружен динамически -->
+</ul>
+
+<h2>Добавить новую авиакомпанию</h2>
+<form id="addCompanyForm">
+    <input type="text" id="companyName" placeholder="Название компании" required />
+    <button type="submit">Добавить</button>
+</form>
+<button id="exportExcelBtn">Сохранить в Excel</button>
+<a href="/data">← Назад</a>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+
+    // Загрузка списка компаний с API
+    function loadCompanies() {
+        fetch('/api/company/', {
+            method: 'GET',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(companies => {
+                const companyList = document.getElementById('companyList');
+                companyList.innerHTML = '';
+                companies.forEach(company => {
+                    const li = document.createElement('li');
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.classList.add('company-name');
+                    nameSpan.textContent = company.name;
+                    nameSpan.dataset.id = company.id;
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Изменить';
+                    editBtn.className = 'btn-edit';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Удалить';
+                    deleteBtn.className = 'btn-delete';
+
+                    // Удаление компании
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`Удалить компанию "${company.name}"?`)) {
+                            fetch(`/api/company/${company.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization':  token,
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(() => loadCompanies());
+                        }
+                    });
+
+                    // Редактирование компании
+                    editBtn.addEventListener('click', () => {
+                        const newName = prompt("Введите новое название:", company.name);
+                        if (newName && newName.trim() !== '') {
+                            fetch(`/api/company/${company.id}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ name: newName })
+                            }).then(() => loadCompanies());
+                        }
+                    });
+
+                    li.appendChild(nameSpan);
+                    li.appendChild(editBtn);
+                    li.appendChild(deleteBtn);
+                    companyList.appendChild(li);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки компаний:', err));
+    }
+
+    document.getElementById('exportExcelBtn').addEventListener('click', function () {
+        fetch('/api/company/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(companies => {
+                /* Преобразуем данные в массив объектов для Excel */
+                const worksheetData = companies.map(company => ({
+                    ID: company.id,
+                    Название: company.name
+                }));
+
+                /* Создаем рабочую книгу и лист */
+                const ws = XLSX.utils.json_to_sheet(worksheetData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Авиакомпании");
+
+                /* Сохраняем как файл Excel */
+                XLSX.writeFile(wb, "Авиакомпании.xlsx");
+            })
+            .catch(err => {
+                console.error("Ошибка при загрузке данных:", err);
+                alert("Не удалось загрузить данные для экспорта.");
+            });
+    });
+
+    // Добавление новой компании
+    document.getElementById('addCompanyForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const companyName = document.getElementById('companyName').value.trim();
+
+        fetch('/api/company/', {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: companyName })
+        })
+            .then(() => {
+                document.getElementById('companyName').value = '';
+                loadCompanies();
+            })
+            .catch(err => console.error('Ошибка добавления компании:', err));
+    });
+
+    // Проверка токена при загрузке
+    window.onload = function () {
+        if (!token) {
+            window.location.href = '/login';
+        } else {
+            loadCompanies();
+        }
+    };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>

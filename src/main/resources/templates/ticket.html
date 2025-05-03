@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Билеты</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .ticket-info {
+            flex-grow: 1;
+        }
+
+        form {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 250px;
+            padding: 8px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        a {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Билеты</h1>
+
+<ul id="ticketList">
+    <!-- Список билетов будет загружен динамически -->
+</ul>
+
+<h2>Добавить новый билет</h2>
+<form id="addTicketForm">
+    <div>
+        <label for="userSelect">Выберите пользователя:</label><br/>
+        <select id="userSelect" required>
+            <option value="">-- Выберите --</option>
+        </select>
+    </div>
+    <div>
+        <label for="flightSelect">Выберите рейс:</label><br/>
+        <select id="flightSelect" required>
+            <option value="">-- Выберите --</option>
+        </select>
+    </div>
+    <div>
+        <input type="number" id="price" placeholder="Цена билета" step="0.01" required />
+    </div>
+    <div>
+        <select id="classSelect" required>
+            <option value="">-- Класс --</option>
+            <option value="ECONOMY">Эконом</option>
+            <option value="BUSINESS">Бизнес</option>
+            <option value="VIP">VIP</option>
+        </select>
+    </div>
+    <div>
+        <input type="text" id="seat" placeholder="Место (например, 12A)" required />
+    </div>
+    <button type="submit" class="btn-add">Добавить</button>
+</form>
+
+<a href="/data">← Назад</a>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+
+    // === Загрузка пользователей для выбора ===
+    function loadUsersForSelect() {
+        fetch('/api/users/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(users => {
+                const userSelect = document.getElementById('userSelect');
+                userSelect.innerHTML = '<option value="">-- Выберите --</option>';
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.name} ${user.lastname}`;
+                    userSelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки пользователей:', err));
+    }
+
+    // === Загрузка рейсов для выбора ===
+    function loadFlightsForSelect() {
+        fetch('/api/flight/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(flights => {
+                const flightSelect = document.getElementById('flightSelect');
+                flightSelect.innerHTML = '<option value="">-- Выберите --</option>';
+                flights.forEach(flight => {
+                    const option = document.createElement('option');
+                    option.value = flight.id;
+                    option.textContent = `${flight.flightNumber} (${flight.departure} → ${flight.destination})`;
+                    flightSelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки рейсов:', err));
+    }
+
+    // === Загрузка билетов ===
+    function loadTickets() {
+        fetch('/api/tickets/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(tickets => {
+                const ticketList = document.getElementById('ticketList');
+                ticketList.innerHTML = '';
+                tickets.forEach(ticket => {
+                    const li = document.createElement('li');
+
+                    const info = document.createElement('div');
+                    info.classList.add('ticket-info');
+                    info.dataset.id = ticket.id;
+                    info.innerHTML = `
+                    <strong>Пользователь:</strong> ${ticket.userName || 'ID: ' + ticket.userId}<br/>
+                    <strong>Рейс:</strong> ${ticket.flightNumber || 'ID: ' + ticket.flightId}<br/>
+                    <strong>Цена:</strong> ${ticket.price}<br/>
+                    <strong>Класс:</strong> ${ticket.clas}<br/>
+                    <strong>Место:</strong> ${ticket.seat}
+                `;
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Изменить';
+                    editBtn.className = 'btn-edit';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Удалить';
+                    deleteBtn.className = 'btn-delete';
+
+                    // Удаление
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`Удалить билет "${ticket.userName}" на рейс "${ticket.flightNumber}"?`)) {
+                            fetch(`/api/tickets/${ticket.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(() => loadTickets());
+                        }
+                    });
+
+                    // Редактирование
+                    editBtn.addEventListener('click', () => {
+                        const newUserId = prompt("Введите ID пользователя:", ticket.userId);
+                        const newFlightId = prompt("Введите ID рейса:", ticket.flightId);
+                        const newPrice = prompt("Введите новую цену:", ticket.price);
+                        const newClass = prompt("Введите новый класс (ECONOMY/BUSINESS):", ticket.clas);
+                        const newSeat = prompt("Введите новое место:", ticket.seat);
+
+                        if (newUserId && newFlightId && newPrice && newClass && newSeat) {
+                            fetch(`/api/tickets/${ticket.id}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    userId: parseInt(newUserId),
+                                    flightId: parseInt(newFlightId),
+                                    price: parseFloat(newPrice),
+                                    clas: newClass,
+                                    seat: newSeat
+                                })
+                            }).then(() => loadTickets());
+                        }
+                    });
+
+                    li.appendChild(info);
+                    li.appendChild(editBtn);
+                    li.appendChild(deleteBtn);
+                    ticketList.appendChild(li);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки билетов:', err));
+    }
+
+    // === Добавление нового билета ===
+    document.getElementById('addTicketForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const userId = document.getElementById('userSelect').value;
+        const flightId = document.getElementById('flightSelect').value;
+        const price = document.getElementById('price').value.trim();
+        const clas = document.getElementById('classSelect').value;
+        const seat = document.getElementById('seat').value.trim();
+
+        if (!userId || !flightId || !price || !clas || !seat) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+        }
+
+        fetch('/api/tickets/', {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ userId, flightId, price, clas, seat })
+        })
+            .then(() => {
+                document.getElementById('userSelect').value = '';
+                document.getElementById('flightSelect').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('classSelect').value = '';
+                document.getElementById('seat').value = '';
+                loadTickets();
+            })
+            .catch(err => console.error('Ошибка добавления билета:', err));
+    });
+
+    // === Проверка токена при загрузке ===
+    window.onload = function () {
+        if (!token) {
+            window.location.href = '/login';
+        } else {
+            loadUsersForSelect();
+            loadFlightsForSelect();
+            loadTickets();
+        }
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Главное меню</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+        }
+
+        a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 18px;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        #logoutBtn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #logoutBtn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+<h1>Главное меню</h1>
+
+<ul>
+    <li><a href="/dictionaries">Справочники</a></li>
+    <li><a href="/data">Данные</a></li>
+    <li><a href="/reports">Отчеты</a></li>
+    <li><a href="/about">О программе</a></li>
+
+</ul>
+
+<button id="logout">Выйти</button>
+
+<script>
+    // Проверка наличия токена при загрузке страницы
+    window.onload = function () {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            // Если токена нет — перенаправляем на логин
+            window.location.href = '/login';
+        }
+    };
+
+    // Обработчик кнопки "Выйти"
+    document.getElementById('logout').addEventListener('click', function logout() {
+        localStorage.removeItem('auth_token'); // или sessionStorage.removeItem(...)
+        // Также очисти другие данные, если хранишь их локально
+        localStorage.removeItem('user');
+    });
+
+</script>
+<script>
+    function logout() {
+        localStorage.removeItem('auth_token'); // или sessionStorage.removeItem(...)
+        // Также очисти другие данные, если хранишь их локально
+        localStorage.removeItem('user');
+    }
+</script>
+</body>
+</html>

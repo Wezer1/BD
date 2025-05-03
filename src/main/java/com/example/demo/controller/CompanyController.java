@@ -5,6 +5,7 @@ import com.example.demo.service.CompanyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,17 +28,20 @@ public class CompanyController {
     }
 
     @DeleteMapping("/{companyId}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CompanyDTO> deleteClient(@PathVariable Integer companyId){
         companyService.deleteCompany(companyId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CompanyDTO> addBox(@Valid @RequestBody CompanyDTO companyDTO){
         return ResponseEntity.ok(companyService.saveCompany(companyDTO));
     }
 
     @PostMapping("/{companyId}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CompanyDTO> changeBox(@PathVariable Integer companyId,
                                             @Valid @RequestBody CompanyDTO companyDTO){
         return ResponseEntity.ok(companyService.changeCompany(companyId, companyDTO));

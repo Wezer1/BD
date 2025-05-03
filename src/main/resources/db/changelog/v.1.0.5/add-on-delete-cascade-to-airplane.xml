@@ -7,9 +7,10 @@
     <!-- Новый changeSet для изменения внешнего ключа -->
     <changeSet id="add-on-delete-cascade-to-airplane" author="uPagge">
         <!-- Удаляем старый внешний ключ -->
-        <dropForeignKeyConstraint baseTableName="airplane" constraintName="fk_airplane_company"/>
+        <dropForeignKeyConstraint baseTableName="airplane"
+                                  constraintName="fk_airplane_company"/>
 
-        <!-- Добавляем новый внешний ключ с onDelete="CASCADE" -->
+        <!-- Добавляем новый внешний ключ с поддержкой каскадного удаления -->
         <addForeignKeyConstraint baseTableName="airplane"
                                  baseColumnNames="company_id"
                                  constraintName="fk_airplane_company"

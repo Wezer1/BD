@@ -22,8 +22,6 @@ public class JwtTokenFilter extends GenericFilterBean {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-
-
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException, JwtAuthenticationException {
 
@@ -44,12 +42,7 @@ public class JwtTokenFilter extends GenericFilterBean {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
                 httpServletResponse.sendError(HttpStatus.UNAUTHORIZED.value());
             }
-        }else{
-
         }
         filterChain.doFilter(servletRequest, servletResponse);
-
     }
-
-
 }

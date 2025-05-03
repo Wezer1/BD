@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Самолеты</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .airplane-info {
+            flex-grow: 1;
+        }
+
+        form {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 250px;
+            padding: 8px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        a {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Самолеты</h1>
+
+<ul id="airplaneList">
+    <!-- Список самолетов будет загружен динамически -->
+</ul>
+
+<h2>Добавить новый самолет</h2>
+<form id="addAirplaneForm">
+    <div>
+        <input type="text" id="brand" placeholder="Марка (Boeing, Airbus)" required />
+    </div>
+    <div>
+        <input type="number" id="capacity" placeholder="Вместимость" required />
+    </div>
+    <div>
+        <input type="text" id="type" placeholder="Тип самолета (например, пассажирский)" required />
+    </div>
+    <div>
+        <label for="companySelect">Выберите авиакомпанию:</label><br/>
+        <select id="companySelect" required>
+            <option value="">-- Выберите --</option>
+        </select>
+    </div>
+    <button type="submit" class="btn-add">Добавить</button>
+</form>
+
+<a href="/data">← Назад</a>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+
+    // === Загрузка компаний и заполнение выпадающего списка ===
+    function loadCompaniesForSelect() {
+        fetch('/api/company/', {
+            headers: {
+                'Authorization':  token,
+            }
+        })
+            .then(response => response.json())
+            .then(companies => {
+                const companySelect = document.getElementById('companySelect');
+                companySelect.innerHTML = '<option value="">-- Выберите --</option>';
+                companies.forEach(company => {
+                    const option = document.createElement('option');
+                    option.value = company.id;
+                    option.textContent = company.name;
+                    companySelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки компаний:', err));
+    }
+
+    // === Загрузка самолетов ===
+    function loadAirplanes() {
+        fetch('/api/airplane/', {
+            headers: {
+                'Authorization':  token
+            }
+        })
+            .then(response => response.json())
+            .then(airplanes => {
+                const airplaneList = document.getElementById('airplaneList');
+                airplaneList.innerHTML = '';
+                airplanes.forEach(plane => {
+                    const li = document.createElement('li');
+
+                    const info = document.createElement('div');
+                    info.classList.add('airplane-info');
+                    info.dataset.id = plane.id;
+                    info.innerHTML = `
+                    <strong>${plane.brand}</strong><br/>
+                    Вместимость: ${plane.capacity}<br/>
+                    Тип: ${plane.type}<br/>
+                    Авиакомпания: ${plane.companyName || 'ID: ' + plane.companyId}
+                `;
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Изменить';
+                    editBtn.className = 'btn-edit';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Удалить';
+                    deleteBtn.className = 'btn-delete';
+
+                    // Удаление
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`Удалить самолет "${plane.brand}"?`)) {
+                            fetch(`/api/airplane/${plane.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization':  token,
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(() => loadAirplanes());
+                        }
+                    });
+
+                    // Редактирование
+                    editBtn.addEventListener('click', () => {
+                        const newBrand = prompt("Введите новую марку:", plane.brand);
+                        const newCapacity = prompt("Введите вместимость:", plane.capacity);
+                        const newType = prompt("Введите тип самолета:", plane.type);
+                        const newCompanyId = prompt("Введите ID авиакомпании:", plane.companyId);
+
+                        if (newBrand && newCapacity && newType && newCompanyId) {
+                            fetch(`/api/airplane/${plane.id}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization':  token,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    brand: newBrand,
+                                    capacity: parseInt(newCapacity),
+                                    type: newType,
+                                    companyId: parseInt(newCompanyId)
+                                })
+                            }).then(() => loadAirplanes());
+                        }
+                    });
+
+                    li.appendChild(info);
+                    li.appendChild(editBtn);
+                    li.appendChild(deleteBtn);
+                    airplaneList.appendChild(li);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки самолетов:', err));
+    }
+
+    // === Добавление нового самолета ===
+    document.getElementById('addAirplaneForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const brand = document.getElementById('brand').value.trim();
+        const capacity = parseInt(document.getElementById('capacity').value.trim());
+        const type = document.getElementById('type').value.trim();
+        const companyId = document.getElementById('companySelect').value;
+
+        if (!companyId) {
+            alert('Пожалуйста, выберите авиакомпанию');
+            return;
+        }
+
+        fetch('/api/airplane/', {
+            method: 'POST',
+            headers: {
+                'Authorization':  token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ brand, capacity, type, companyId })
+        }).then(() => {
+            document.getElementById('brand').value = '';
+            document.getElementById('capacity').value = '';
+            document.getElementById('type').value = '';
+            document.getElementById('companySelect').value = '';
+            loadAirplanes();
+        }).catch(err => console.error('Ошибка добавления самолета:', err));
+    });
+
+    // === Проверка токена при загрузке ===
+    window.onload = function () {
+        if (!token) {
+            window.location.href = '/login';
+        } else {
+            loadCompaniesForSelect();
+            loadAirplanes();
+        }
+    };
+</script>
+</body>
+</html>

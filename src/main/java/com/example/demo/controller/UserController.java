@@ -20,6 +20,11 @@ public class UserController {
 
         return ResponseEntity.ok(userService.saveUser(userRegistrationRequestDto));
     }
+    @PostMapping("/")
+    public ResponseEntity<UserRegistrationResponseDto> addUser(@RequestBody UserRegistrationRequestDto userRegistrationRequestDto){
+
+        return ResponseEntity.ok(userService.saveUser(userRegistrationRequestDto));
+    }
     @GetMapping("/")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<UserRegistrationResponseDto>> getAllUsers(){

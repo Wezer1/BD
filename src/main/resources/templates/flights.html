@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Рейсы</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .flight-info {
+            flex-grow: 1;
+        }
+
+        form {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 250px;
+            padding: 8px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        a {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Рейсы</h1>
+
+<ul id="flightList">
+    <!-- Список рейсов будет загружен динамически -->
+</ul>
+
+<h2>Добавить новый рейс</h2>
+<form id="addFlightForm">
+    <div>
+        <input type="text" id="departure" placeholder="Пункт отправления" required />
+    </div>
+    <div>
+        <input type="text" id="destination" placeholder="Пункт назначения" required />
+    </div>
+    <div>
+        <input type="text" id="flightNumber" placeholder="Номер рейса (например, SU123)" required />
+    </div>
+    <div>
+        <label for="airplaneSelect">Выберите самолет:</label><br/>
+        <select id="airplaneSelect" required>
+            <option value="">-- Выберите --</option>
+        </select>
+    </div>
+    <button type="submit" class="btn-add">Добавить</button>
+</form>
+
+<a href="/data">← Назад</a>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+
+    // === Загрузка самолетов и заполнение выпадающего списка ===
+    function loadAirplanesForSelect() {
+        fetch('/api/airplane/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(airplanes => {
+                const airplaneSelect = document.getElementById('airplaneSelect');
+                airplaneSelect.innerHTML = '<option value="">-- Выберите --</option>';
+                airplanes.forEach(plane => {
+                    const option = document.createElement('option');
+                    option.value = plane.id;
+                    option.textContent = `${plane.brand} (${plane.type})`;
+                    airplaneSelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки самолетов:', err));
+    }
+
+    // === Загрузка рейсов ===
+    function loadFlights() {
+        fetch('/api/flight/', {
+            headers: {
+                'Authorization': token
+            }
+        })
+            .then(response => response.json())
+            .then(flights => {
+                const flightList = document.getElementById('flightList');
+                flightList.innerHTML = '';
+                flights.forEach(flight => {
+                    const li = document.createElement('li');
+
+                    const info = document.createElement('div');
+                    info.classList.add('flight-info');
+                    info.dataset.id = flight.id;
+                    info.innerHTML = `
+                    <strong>${flight.flightNumber}</strong><br/>
+                    Отправление: ${flight.departure}<br/>
+                    Прибытие: ${flight.destination}<br/>
+                    Самолет: ${flight.airplaneBrand || 'ID: ' + flight.airplaneId}
+                `;
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Изменить';
+                    editBtn.className = 'btn-edit';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Удалить';
+                    deleteBtn.className = 'btn-delete';
+
+                    // Удаление
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`Удалить рейс "${flight.flightNumber}"?`)) {
+                            fetch(`/api/flight/${flight.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(() => loadFlights());
+                        }
+                    });
+
+                    // Редактирование
+                    editBtn.addEventListener('click', () => {
+                        const newDeparture = prompt("Введите новое место отправления:", flight.departure);
+                        const newDestination = prompt("Введите новое место назначения:", flight.destination);
+                        const newFlightNumber = prompt("Введите новый номер рейса:", flight.flightNumber);
+                        const newAirplaneId = prompt("Введите ID нового самолета:", flight.airplaneId);
+
+                        if (newDeparture && newDestination && newFlightNumber && newAirplaneId) {
+                            fetch(`/api/flight/${flight.id}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': token,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    departure: newDeparture,
+                                    destination: newDestination,
+                                    flightNumber: newFlightNumber,
+                                    airplaneId: parseInt(newAirplaneId)
+                                })
+                            }).then(() => loadFlights());
+                        }
+                    });
+
+                    li.appendChild(info);
+                    li.appendChild(editBtn);
+                    li.appendChild(deleteBtn);
+                    flightList.appendChild(li);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки рейсов:', err));
+    }
+
+    // === Добавление нового рейса ===
+    document.getElementById('addFlightForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const departure = document.getElementById('departure').value.trim();
+        const destination = document.getElementById('destination').value.trim();
+        const flightNumber = document.getElementById('flightNumber').value.trim();
+        const airplaneId = document.getElementById('airplaneSelect').value;
+
+        if (!airplaneId) {
+            alert('Пожалуйста, выберите самолет');
+            return;
+        }
+
+        fetch('/api/flight/', {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                departure,
+                destination,
+                flightNumber,
+                airplaneId: parseInt(airplaneId)
+            })
+        })
+            .then(() => {
+                document.getElementById('departure').value = '';
+                document.getElementById('destination').value = '';
+                document.getElementById('flightNumber').value = '';
+                document.getElementById('airplaneSelect').value = '';
+                loadFlights();
+            })
+            .catch(err => console.error('Ошибка добавления рейса:', err));
+    });
+
+    // === Проверка токена при загрузке ===
+    window.onload = function () {
+        if (!token) {
+            window.location.href = '/login';
+        } else {
+            loadAirplanesForSelect();
+            loadFlights();
+        }
+    };
+</script>
+</body>
+</html>

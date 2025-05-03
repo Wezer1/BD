@@ -5,15 +5,15 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
 
     <!-- Новый changeSet для изменения внешнего ключа -->
-    <changeSet id="add-on-delete-cascade-to-airplane" author="uPagge">
+    <changeSet id="add-on-delete-cascade-to-flight" author="uPagge">
         <!-- Удаляем старый внешний ключ -->
-        <dropForeignKeyConstraint baseTableName="airplane" constraintName="fk_airplane_company"/>
+        <dropForeignKeyConstraint baseTableName="flight" constraintName="fk_flight_airplane"/>
 
         <!-- Добавляем новый внешний ключ с onDelete="CASCADE" -->
-        <addForeignKeyConstraint baseTableName="airplane"
-                                 baseColumnNames="company_id"
-                                 constraintName="fk_airplane_company"
-                                 referencedTableName="company"
+        <addForeignKeyConstraint baseTableName="flight"
+                                 baseColumnNames="airplane_id"
+                                 constraintName="fk_flight_airplane"
+                                 referencedTableName="airplane"
                                  referencedColumnNames="id"
                                  onDelete="CASCADE"/>
     </changeSet>
