@@ -1,20 +1,22 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.AuthRequestDTO;
+import com.example.demo.dto.AuthResponseDTO;
+import com.example.demo.service.AuthService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
-@RequestMapping("/auth")
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    @GetMapping("/login")
-    public String getLoginPage(){
-        return "login";
-    }
+    private final AuthService authService;
 
-    @GetMapping("/success")
-    public String getSuccessPage(){
-        return "success";
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponseDTO> login(@RequestBody AuthRequestDTO authRequestDTO) {
+        return authService.authenticate(authRequestDTO);
     }
 }

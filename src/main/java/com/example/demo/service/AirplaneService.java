@@ -78,7 +78,6 @@ public class AirplaneService {
         }
     }
 
-
     @Transactional
     public void deleteAirplane(Integer airplaneId) {
         log.info("Delete airplane");
@@ -87,5 +86,4 @@ public class AirplaneService {
         }
         airplaneRepository.deleteById(airplaneId);
     }
-
 }
