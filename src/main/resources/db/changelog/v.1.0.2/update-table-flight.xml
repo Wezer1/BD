@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+
+    <!-- Новый changeSet для изменения внешнего ключа -->
+    <changeSet id="add-on-delete-cascade-to-flight" author="uPagge">
+        <!-- Удаляем старый внешний ключ -->
+        <dropForeignKeyConstraint baseTableName="flight" constraintName="fk_flight_airplane"/>
+
+        <!-- Добавляем новый внешний ключ с onDelete="CASCADE" -->
+        <addForeignKeyConstraint baseTableName="flight"
+                                 baseColumnNames="airplane_id"
+                                 constraintName="fk_flight_airplane"
+                                 referencedTableName="airplane"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

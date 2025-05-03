@@ -1,13 +1,17 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.FlightDTO;
+import com.example.demo.dto.FlightFilterDTO;
 import com.example.demo.entity.Flight;
 import com.example.demo.exceptions.NoSuchException;
 import com.example.demo.mapper.FlightMapper;
 import com.example.demo.repository.AirplaneRepository;
 import com.example.demo.repository.FlightRepository;
+import com.example.demo.repository.specification.FlightSpecifications;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,4 +84,12 @@ public class FlightService {
         flightRepository.deleteById(flightId);
     }
 
+    @Transactional(readOnly = true)
+    public List<FlightDTO> filterFlights(FlightFilterDTO filter, String sortColumn, String sortDirection) {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortColumn);
+        return flightRepository.findAll(FlightSpecifications.withFilter(filter), sort)
+                .stream()
+                .map(flightMapper::toDto)
+                .collect(Collectors.toList());
+    }
 }

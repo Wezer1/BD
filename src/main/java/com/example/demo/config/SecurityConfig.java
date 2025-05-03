@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -33,18 +34,41 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
+                .csrf().disable() // Отключаем CSRF (для тестирования)
                 .authorizeHttpRequests()
-                .requestMatchers(HttpMethod.POST,"/api/users/registration").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/users/registration").permitAll() // Разрешаем доступ к этим маршрутам
                 .anyRequest()
-                .authenticated()
+                .authenticated() // Остальные запросы требуют аутентификации
                 .and()
-                .apply(jwtConfigurer);
+                .formLogin()
+                .loginPage("/api/auth/login") // Указываем свою кастомную страницу логина
+                .permitAll() // Разрешаем доступ ко всем пользователям
+                .defaultSuccessUrl("/") // Перенаправляем после успешной аутентификации
+                .and()
+                .apply(jwtConfigurer)
+                .and()
+                .logout() // Настраиваем logout
+                .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "POST"))
+                .invalidateHttpSession(true) // Удаляем сессию
+                .clearAuthentication(true) // Очищаем данные аутентификации
+                .deleteCookies("JSESSIONID") // Удаляем cookie
+                .logoutSuccessUrl("/api/auth/login");// Перенаправляем на страницу логина после выхода
+
 
         return http.build();
+//        http
+//                .csrf().disable()
+//                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+//                .and()
+//                .authorizeHttpRequests()
+//                .requestMatchers(HttpMethod.POST,"/api/users/registration").permitAll()
+//                .requestMatchers("/api/auth/**").permitAll()
+//                .anyRequest()
+//                .authenticated()
+//                .and()
+//                .apply(jwtConfigurer);
+//
+//        return http.build();
     }
     
     @Bean

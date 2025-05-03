@@ -1,15 +1,17 @@
 package com.example.demo.controller;
 
 
-import com.example.demo.dto.CompanyDTO;
 import com.example.demo.dto.FlightDTO;
+import com.example.demo.dto.FlightFilterDTO;
 import com.example.demo.service.FlightService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Controller
@@ -43,5 +45,26 @@ public class FlightController {
     public ResponseEntity<FlightDTO> changeFlight(@PathVariable Integer flightId,
                                                 @Valid @RequestBody FlightDTO flightDTO){
         return ResponseEntity.ok(flightService.changeFlight(flightId, flightDTO));
+    }
+//TODO: реализовать фильтрацию с помощью EntityFilter
+
+    @GetMapping("/search")
+    public ResponseEntity<List<FlightDTO>> searchFlights(
+            @RequestParam(required = false) String departure,
+            @RequestParam(required = false) String destination,
+            @RequestParam(required = false) Integer airplaneId,
+            @RequestParam(required = false) String flightNumber,
+            @RequestParam(defaultValue = "id") String sortColumn,
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
+        // Создаем DTO для фильтрации
+        FlightFilterDTO filter = new FlightFilterDTO();
+        filter.setDeparture(departure);
+        filter.setDestination(destination);
+        filter.setAirplaneId(airplaneId);
+        filter.setFlightNumber(flightNumber);
+
+        // Вызываем сервис с фильтрацией и сортировкой
+        return ResponseEntity.ok(flightService.filterFlights(filter, sortColumn, sortDirection));
     }
 }
